@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+/* MOOTEK Android bridge: browser-style storage is persisted in native SQLite. */
+(function(){
+  const native=window.MootekNative;
+  if(native){
+    const storage={
+      getItem:function(k){const v=native.getItem(String(k));return v===null?null:String(v)},
+      setItem:function(k,v){native.setItem(String(k),String(v))},
+      removeItem:function(k){native.removeItem(String(k))},
+      clear:function(){native.clear()},
+      key:function(i){const keys=['mootek_service_entries_v1','mootek_call_entries_v1','mootek_rd_entries_v1'].filter(k=>native.getItem(k)!==null);return keys[i]||null}
+    };
+    Object.defineProperty(storage,'length',{get:function(){return Object.keys(nativeKeys()).length}});
+    function nativeKeys(){let out={};['mootek_service_entries_v1','mootek_call_entries_v1','mootek_rd_entries_v1'].forEach(k=>{if(native.getItem(k)!==null)out[k]=1});return out}
+    try{Object.defineProperty(window,'localStorage',{configurable:true,value:storage})}catch(e){}
+    try{Object.defineProperty(navigator,'share',{configurable:true,value:function(data){native.share((data&&data.text)||'MOOTEK report')}})}catch(e){}
+    window.print=function(){native.printPage()};
+  }
+})();
+</script>
+
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10243a">
+<title>MOOTEK Service Entry</title>
+<style>
+:root{--navy:#10243a;--blue:#1769aa;--bg:#f3f6fa;--ink:#172638;--muted:#68788b;--line:#dce4ed;--green:#16845b;--red:#c34242;--amber:#a66a08}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Arial,sans-serif}
+header{background:linear-gradient(120deg,#10243a,#1d527b);color:white;padding:18px 16px 16px}
+.head{max-width:1100px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{font-size:21px;font-weight:800;letter-spacing:.5px}.sub{color:#c9d8e7;font-size:12px}
+.wrap{max-width:1100px;margin:18px auto;padding:0 14px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+button,.btn{border:0;border-radius:9px;padding:10px 13px;background:var(--blue);color:white;font-weight:700;cursor:pointer;font-size:13px}
+button.secondary,.btn.secondary{background:#e7edf4;color:#24384d}button.danger{background:#b83d3d}button.green{background:var(--green)}
+.tab.active{background:var(--navy);color:white}.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 3px 12px #18324a0a}
+h2{font-size:17px;margin:0 0 14px}h3{font-size:14px;margin:0 0 10px}
+.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.stat{background:white;border:1px solid var(--line);border-radius:12px;padding:13px}.stat small{color:var(--muted);display:block}.stat strong{font-size:24px;display:block;margin-top:5px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}
+label{font-weight:700;font-size:12px;color:#43556a}input,select,textarea{width:100%;border:1px solid #cdd8e3;border-radius:8px;padding:10px;background:white;color:var(--ink);font:14px Arial}
+textarea{min-height:72px;resize:vertical}.hint{font-size:11px;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:760px}th,td{text-align:left;padding:10px 9px;border-bottom:1px solid var(--line);font-size:12px;vertical-align:top}th{background:#f5f8fb;color:#4a5d70;position:sticky;top:0}
+.pill{display:inline-block;border-radius:20px;padding:3px 8px;font-size:11px;font-weight:700;background:#e8eef5}.pill.complete{background:#dff4e9;color:#126b47}.pill.pending{background:#fff0d5;color:#8a5900}.pill.cant{background:#ffe2e2;color:#a52e2e}
+.hidden{display:none!important}.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.toolbar input{max-width:260px}.note{background:#fff8e8;border:1px solid #f0dfb5;padding:10px;border-radius:9px;color:#74551c;font-size:12px}
+footer{text-align:center;color:#758497;font-size:11px;padding:20px}
+@media(max-width:760px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.head{align-items:flex-start;flex-direction:column}.wrap{margin-top:12px}.panel{padding:13px}}
+@media print{header,.tabs,.no-print,footer{display:none!important}body{background:white}.wrap{max-width:none;margin:0;padding:0}.panel{box-shadow:none;border:0;padding:0}.tablewrap{overflow:visible}table{min-width:0}th,td{font-size:9px;padding:5px}}
+</style></head>
+<body>
+<header><div class="head"><div><div class="brand">MOOTEK SERVICE MANAGEMENT</div><div class="sub">Service • Customer Calls • R&D • Local mobile storage</div></div><div class="sub" id="today"></div></div></header>
+<main class="wrap">
+<section id="home" style="margin-bottom:16px"><div class="panel"><h2>MOOTEK WORKSPACE</h2><p class="hint">Select a module to continue.</p><div class="grid">
+<button class="green" style="padding:22px;font-size:16px" onclick="openModule('service')">1. SERVICE ENTRY</button>
+<button style="padding:22px;font-size:16px" onclick="openModule('call')">2. CALL ENTRY</button>
+<button class="secondary" style="padding:22px;font-size:16px" onclick="openModule('rd')">3. R&amp;D ENTRY</button>
+</div></div></section><div class="tabs no-print hidden" id="serviceTabs">
+<button class="tab active" data-tab="dashboard">Dashboard</button><button class="tab secondary" data-tab="entry">New Service Entry</button><button class="tab secondary" data-tab="records">Service Records</button><button class="tab secondary" data-tab="backup">Backup & Settings</button>
+</div>
+<section id="dashboard" class="hidden"><div id="overdueAlert" class="note hidden" style="border-color:#e7b5b5;background:#fff0f0;color:#9b2929;margin-bottom:14px"></div>
+<div class="cards">
+<div class="stat" role="button" tabindex="0" onclick="openMetric('')" style="cursor:pointer"><small>Total</small><strong id="sTotal">0</strong></div><div class="stat" role="button" tabindex="0" onclick="openMetric('Pending')" style="cursor:pointer"><small>Pending</small><strong id="sPending">0</strong></div><div class="stat" role="button" tabindex="0" onclick="openMetric('Complete')" style="cursor:pointer"><small>Complete</small><strong id="sComplete">0</strong></div><div class="stat" role="button" tabindex="0" onclick="openMetric('Free')" style="cursor:pointer"><small>Free</small><strong id="sFree">0</strong></div><div class="stat" role="button" tabindex="0" onclick="openMetric('Paid')" style="cursor:pointer"><small>Amount (₹)</small><strong id="sAmount">0</strong></div><div class="stat" role="button" tabindex="0" onclick="openMetric("Can't Repair")" style="cursor:pointer"><small>Can't Repair</small><strong id="sCant">0</strong></div>
+</div>
+<div class="panel"><h2>Recent Service Entries</h2><div class="actions no-print" style="margin:0 0 10px"><button onclick="shareAll()">Share All on WhatsApp</button></div><div class="tablewrap"><table><thead><tr><th>Entry</th><th>Customer</th><th>Product / Model</th><th>Serial</th><th>Status</th><th>Amount</th><th>Date</th></tr></thead><tbody id="recentRows"></tbody></table></div></div>
+<div class="note">Your records are saved in this browser on this mobile. Do not clear browser app data/cache or uninstall the browser before exporting a backup.</div>
+</section>
+<section id="entry" class="hidden">
+<div class="panel"><h2 id="formTitle">New Service Entry</h2>
+<form id="serviceForm">
+<input type="hidden" id="editId">
+<div class="grid">
+<div class="field"><label>Service Number *</label><input id="serviceNo" required placeholder="Example: SRV-0001"><div class="hint">Enter your own unique service number.</div></div>
+<div class="field"><label>Customer Name *</label><input id="customer" required placeholder="Customer / Company name"></div>
+<div class="field"><label>Mobile Number</label><input id="mobile" inputmode="tel" placeholder="Contact number"></div>
+<div class="field"><label>Product *</label><input id="product" required placeholder="IPC / Motherboard / Monitor"></div>
+<div class="field"><label>Product Model *</label><input id="model" required placeholder="Model number"></div>
+<div class="field"><label>Product Serial Number</label><input id="serial" placeholder="Serial number"></div>
+<div class="field"><label>Received Date *</label><input id="received" type="date" required></div>
+<div class="field"><label>Bill Date</label><input id="billDate" type="date"></div>
+<div class="field"><label>Bill Number</label><input id="billNo" placeholder="Invoice number"></div>
+<div class="field"><label>Warranty Period (months)</label><input id="warrantyMonths" type="number" min="0" value="12"></div>
+<div class="field"><label>Warranty Status</label><select id="warranty"><option value="auto">Auto calculate from bill date</option><option value="in">Warranty In (Manual)</option><option value="out">Warranty Out (Manual)</option></select><div class="hint" id="warrantyHint">Bill date + warranty months determines warranty status.</div></div>
+<div class="field full"><label>Customer Complaint</label><textarea id="complaint" placeholder="Customer reported issue..."></textarea></div>
+<div class="field full"><label>Root Cause</label><textarea id="rootCause" placeholder="Root cause identified..."></textarea></div>
+<div class="field"><label>Service Status</label><select id="status"><option>Pending</option><option>Complete</option><option>Can't Repair</option></select></div>
+<div class="field"><label>Service Type</label><select id="chargeType"><option value="paid">Paid</option><option value="free">Free</option></select></div>
+<div class="field"><label>Service Amount (₹)</label><input id="amount" type="number" min="0" step="0.01" value="0"></div>
+<div class="field"><label>Final Update</label><input id="finalUpdate" placeholder="Final action / customer update"></div>
+</div>
+<div class="actions"><button type="submit" class="green">Save Service Entry</button><button type="button" class="secondary" id="resetBtn">Clear Form</button></div>
+</form></div></section>
+<section id="records" class="hidden"><div class="panel"><h2>All Service Records</h2>
+<div class="toolbar no-print"><button onclick="shareSelected()">Share Selected on WhatsApp</button><button class="secondary" onclick="selectVisible(true)">Select All</button><button class="secondary" onclick="selectVisible(false)">Clear Selection</button><input id="search" placeholder="Search customer / model / serial..."><select id="filterStatus"><option value="">All Status</option><option>Pending</option><option>Complete</option><option>Can't Repair</option></select><button onclick="printRecords()">Download PDF</button><button class="secondary" onclick="exportCSV()">Export CSV</button></div>
+<div class="hint no-print" id="selectionHint" style="margin-bottom:8px">Select one or more service entries to share a professional WhatsApp report.</div><div class="tablewrap"><table id="recordsTable"><thead><tr><th>Select</th><th>Entry ID</th><th>Customer</th><th>Product / Model</th><th>Serial</th><th>Received</th><th>Warranty</th><th>Status</th><th>Type / Amount</th><th>Actions</th></tr></thead><tbody id="recordRows"></tbody></table></div></div></section>
+<section id="detail" class="hidden"><div class="panel">
+<div class="toolbar no-print"><button class="secondary" onclick="showTab('records')">← Back to Records</button><button onclick="shareRecord(currentDetail)">Share on WhatsApp</button><button class="secondary" onclick="printDetail()">Download PDF</button><button class="green" onclick="editRecord(currentDetail)">Edit Entry</button></div>
+<h2>Service Entry Details</h2><div id="detailContent"></div></div></section>
+<section id="backup" class="hidden"><div class="panel"><h2>Backup & Data Management</h2><p>All entries are stored locally in this browser using device storage.</p><div class="actions"><button class="green" onclick="backupJSON()">Download Full Backup (JSON)</button><label class="btn secondary" for="restoreFile">Restore Backup</label><input class="hidden" type="file" id="restoreFile" accept=".json,application/json"><button class="secondary" onclick="printRecords()">Download PDF</button></div><hr style="border:0;border-top:1px solid var(--line);margin:18px 0"><h3>Warranty setting</h3><p class="hint">Default warranty period for new entries is 12 months. You can change it per product in the service form.</p><button class="danger" onclick="clearAll()">Delete All Local Records</button><p class="hint">Delete action cannot be undone. Download a backup first.</p></div></section>
+<section id="callHome" class="hidden">
+<div class="toolbar no-print"><button class="secondary" onclick="goHome()">← Home</button><button onclick="showCallPage('callForm')">+ New Call Entry</button><button class="secondary" onclick="showCallPage('callList')">Call Records</button></div>
+<div class="cards" style="grid-template-columns:repeat(4,1fr)">
+<div class="stat" onclick="filterCalls('')" style="cursor:pointer"><small>Total Call</small><strong id="callTotal">0</strong></div>
+<div class="stat" onclick="filterCalls('Pending')" style="cursor:pointer"><small>Pending</small><strong id="callPending">0</strong></div>
+<div class="stat" onclick="filterCalls('Completed')" style="cursor:pointer"><small>Completed</small><strong id="callCompleted">0</strong></div>
+<div class="stat" onclick="filterCalls('On Going')" style="cursor:pointer"><small>On Going</small><strong id="callOngoing">0</strong></div></div>
+<div class="panel"><h2>Recent Customer Calls</h2><div class="tablewrap"><table><thead><tr><th>Call No.</th><th>Customer</th><th>Product</th><th>Issue</th><th>Support</th><th>Status</th></tr></thead><tbody id="callRecent"></tbody></table></div></div></section>
+<section id="callForm" class="hidden"><div class="toolbar no-print"><button class="secondary" onclick="showCallPage('callHome')">← Call Dashboard</button></div><div class="panel"><h2 id="callFormTitle">New Call Entry</h2><form id="callEntryForm"><input type="hidden" id="callEditId"><div class="grid">
+<div class="field"><label>Call Number *</label><input id="callNo" required placeholder="CALL-001"></div><div class="field"><label>Call Date *</label><input id="callDate" type="date" required></div>
+<div class="field"><label>Customer Name *</label><input id="callCustomer" required></div><div class="field"><label>Mobile Number *</label><input id="callMobile" required inputmode="tel"></div>
+<div class="field"><label>Product Used by Customer *</label><input id="callProduct" required placeholder="Industrial PC / IPC / HMI"></div><div class="field"><label>Product Model / Serial</label><input id="callModel" placeholder="Model and serial number"></div>
+<div class="field full"><label>Customer Issue / Query *</label><textarea id="callIssue" required placeholder="What issue did the customer report?"></textarea></div>
+<div class="field"><label>Support Method</label><select id="callMethod"><option>Mobile Call Guidance</option><option>Online Remote Support</option><option>UltraViewer</option><option>AnyDesk</option><option>Other</option></select></div>
+<div class="field"><label>Call Status</label><select id="callStatus"><option>Pending</option><option>On Going</option><option>Completed</option></select></div>
+<div class="field full"><label>Action / Troubleshooting Done</label><textarea id="callAction" placeholder="Steps explained or remote troubleshooting performed"></textarea></div>
+<div class="field"><label>Remote Session ID (optional)</label><input id="callRemoteId" placeholder="UltraViewer / AnyDesk ID"></div><div class="field"><label>Follow-up Date</label><input id="callFollowup" type="date"></div>
+<div class="field full"><label>Final Update / Remarks</label><textarea id="callFinal" placeholder="Resolution and customer confirmation"></textarea></div>
+</div><div class="actions"><button class="green" type="submit">Save Call Entry</button><button type="button" class="secondary" onclick="resetCallForm()">Clear Form</button></div></form></div></section>
+<section id="callList" class="hidden"><div class="toolbar no-print"><button class="secondary" onclick="showCallPage('callHome')">← Call Dashboard</button><button onclick="shareSelectedCalls()">Share Selected on WhatsApp</button><button class="secondary" onclick="window.print()">Download PDF</button><input id="callSearch" placeholder="Search customer / product / issue"><select id="callFilter"><option value="">All Status</option><option>Pending</option><option>On Going</option><option>Completed</option></select></div><div class="panel"><h2>Customer Call History</h2><div class="hint">Select calls individually to share on WhatsApp.</div><div class="tablewrap"><table><thead><tr><th>Select</th><th>Call No.</th><th>Date</th><th>Customer</th><th>Product</th><th>Issue</th><th>Support Method</th><th>Status</th><th>Actions</th></tr></thead><tbody id="callRows"></tbody></table></div></div></section>
+<section id="rdHome" class="hidden"><div class="toolbar no-print"><button class="secondary" onclick="goHome()">← Home</button><button onclick="showRdPage('rdForm')">+ New R&amp;D Entry</button><button class="secondary" onclick="showRdPage('rdList')">R&amp;D Records</button></div><div class="cards" style="grid-template-columns:repeat(3,1fr)"><div class="stat"><small>Total R&amp;D</small><strong id="rdTotal">0</strong></div><div class="stat"><small>In Progress</small><strong id="rdProgress">0</strong></div><div class="stat"><small>Passed</small><strong id="rdPassed">0</strong></div></div><div class="panel"><h2>R&amp;D Overview</h2><p>Research ID, stage, findings, attachments and downloadable report.</p></div></section>
+<section id="rdForm" class="hidden"><div class="toolbar no-print"><button class="secondary" onclick="showRdPage('rdHome')">← R&amp;D Dashboard</button></div><div class="panel"><h2>New R&amp;D Entry</h2><form id="rdEntryForm"><div class="grid">
+<div class="field"><label>Research ID *</label><input id="rdNo" required placeholder="MRD0001"></div><div class="field"><label>Project / Product *</label><input id="rdProject" required></div>
+<div class="field"><label>Stage</label><select id="rdStage"><option>Not Started</option><option>Start</option><option>Pending</option><option>Need More Action</option><option>Pass</option><option>Failed</option></select></div><div class="field"><label>Assigned To</label><input id="rdOwner"></div>
+<div class="field full"><label>Research / Task Details</label><textarea id="rdDetails"></textarea></div><div class="field full"><label>Findings / Final Report</label><textarea id="rdFindings"></textarea></div>
+<div class="field full"><label>Attach Images / Files</label><input id="rdFiles" type="file" multiple accept="image/*,.pdf,.txt"><div class="hint">Maximum 1.2 MB per attachment for local storage reliability.</div></div>
+</div><div class="actions"><button class="green" type="submit">Save R&amp;D Entry</button></div></form></div></section>
+<section id="rdList" class="hidden"><div class="toolbar no-print"><button class="secondary" onclick="showRdPage('rdHome')">← R&amp;D Dashboard</button><input id="rdSearch" placeholder="Search research ID / project"><button class="secondary" onclick="window.print()">Download PDF</button></div><div class="panel"><h2>R&amp;D Records</h2><div class="tablewrap"><table><thead><tr><th>Research ID</th><th>Project</th><th>Stage</th><th>Owner</th><th>Details / Findings</th><th>Attachments</th></tr></thead><tbody id="rdRows"></tbody></table></div></div></section>
+<footer>MOOTEK Service Entry • Offline-ready single-file app</footer>
+</main>
+<script>
+const KEY='mootek_service_entries_v1';let records=[];
+const $=id=>document.getElementById(id);
+function load(){try{records=JSON.parse(localStorage.getItem(KEY)||'[]');if(!Array.isArray(records))records=[]}catch(e){records=[]}}
+function save(){localStorage.setItem(KEY,JSON.stringify(records));render()}
+function today(){return new Date().toISOString().slice(0,10)}
+$('today').textContent=new Date().toLocaleDateString();
+$('received').value=today();
+function warrantyStatus(r){
+ if(r.warranty==='in')return 'Warranty In';if(r.warranty==='out')return 'Warranty Out';
+ if(!r.billDate)return 'Bill date missing';
+ let d=new Date(r.billDate+'T00:00:00');d.setMonth(d.getMonth()+Number(r.warrantyMonths||12));
+ return d>=new Date(today()+'T00:00:00')?'Warranty In':'Warranty Out';
+}
+function showTab(name){document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));$(name).classList.remove('hidden');document.querySelectorAll('.tab').forEach(b=>{b.classList.toggle('active',b.dataset.tab===name);b.classList.toggle('secondary',b.dataset.tab!==name)});if(name==='records')renderRecords()}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+function val(id){return $(id).value.trim()}
+$('warranty').addEventListener('change',()=>{$('warrantyHint').textContent=$('warranty').value==='auto'?'Bill date + warranty months determines warranty status.':'Manual warranty status selected.'});
+$('serviceForm').addEventListener('submit',e=>{
+ e.preventDefault();
+ let oldId=val('editId'),id=val('serviceNo'),old=records.find(x=>x.id===oldId);
+ if(records.some(x=>x.id===id&&x.id!==oldId)){alert('This Service Number already exists. Please enter a unique number.');$('serviceNo').focus();return;}
+ let r={id,customer:val('customer'),mobile:val('mobile'),product:val('product'),model:val('model'),serial:val('serial'),received:val('received'),billDate:val('billDate'),billNo:val('billNo'),warranty:val('warranty'),warrantyMonths:Number(val('warrantyMonths')||12),complaint:val('complaint'),rootCause:val('rootCause'),status:val('status'),chargeType:val('chargeType'),amount:val('chargeType')==='free'?0:Number(val('amount')||0),finalUpdate:val('finalUpdate'),created:old?.created||new Date().toISOString(),updated:new Date().toISOString()};
+ if(old)records=records.map(x=>x.id===oldId?r:x);else records.unshift(r);
+ save();resetForm();showTab('records');alert('Service entry saved successfully!');
+});
+function resetForm(){$('serviceForm').reset();$('editId').value='';$('serviceNo').value='';$('received').value=today();$('warrantyMonths').value=12;$('amount').value=0;$('formTitle').textContent='New Service Entry'}
+$('resetBtn').onclick=resetForm;
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function badge(s){return `<span class="pill ${s==='Complete'?'complete':s==='Pending'?'pending':s==="Can't Repair"?'cant':''}">${esc(s)}</span>`}
+function render(){let total=records.length,p=records.filter(r=>r.status==='Pending').length,c=records.filter(r=>r.status==='Complete').length,f=records.filter(r=>r.chargeType==='free').length,a=records.filter(r=>r.chargeType!=='free').reduce((n,r)=>n+Number(r.amount||0),0),cant=records.filter(r=>r.status==="Can't Repair").length;
+$('sTotal').textContent=total;$('sPending').textContent=p;$('sComplete').textContent=c;$('sFree').textContent=f;$('sAmount').textContent=a.toLocaleString('en-IN');$('sCant').textContent=cant;
+let overdue=records.filter(r=>r.status==='Pending'&&r.received&&Math.floor((new Date(today()+'T00:00:00')-new Date(r.received+'T00:00:00'))/86400000)>3);
+let alertBox=$('overdueAlert');if(overdue.length){alertBox.classList.remove('hidden');alertBox.innerHTML='<b>⚠ Service Delay Alert:</b> '+overdue.length+' pending service entr'+(overdue.length===1?'y has':'ies have')+' been pending for more than 3 days. '+overdue.map(r=>esc(r.customer)+' ('+esc(r.id)+')').join(', ')+'.';}else{alertBox.classList.add('hidden');alertBox.innerHTML='';}
+
+$('recentRows').innerHTML=records.slice(0,6).map(r=>`<tr onclick="showDetail('${r.id}')" style="cursor:pointer"><td>${esc(r.id)}</td><td>${esc(r.customer)}</td><td>${esc(r.product)}<br>${esc(r.model)}</td><td>${esc(r.serial)}</td><td>${badge(r.status)}</td><td>₹${Number(r.amount||0).toLocaleString('en-IN')} ${r.chargeType==='free'?'(Free)':''}</td><td>${esc(r.received)}</td></tr>`).join('')||'<tr><td colspan="7">No service entries yet.</td></tr>';renderRecords()}
+let selectedIds=new Set();
+function renderRecords(){
+ let q=($('search')?.value||'').toLowerCase(),st=$('filterStatus')?.value||'';
+ let list=records.filter(r=>(!st||r.status===st)&&[r.id,r.customer,r.mobile,r.product,r.model,r.serial].join(' ').toLowerCase().includes(q));
+ $('recordRows').innerHTML=list.map(r=>`<tr>
+ <td><input aria-label="Select ${esc(r.id)}" type="checkbox" style="width:18px;height:18px" ${selectedIds.has(r.id)?'checked':''} onchange="toggleSelected('${r.id}',this.checked)"></td>
+ <td>${esc(r.id||'—')}</td><td>${esc(r.customer||'—')}<br>${esc(r.mobile||'')}</td>
+ <td>${esc(r.product||'—')}<br>${esc(r.model||'')}</td><td>${esc(r.serial||'—')}</td>
+ <td>${esc(r.received||'—')}</td><td>${esc(warrantyStatus(r))}</td><td>${badge(r.status||'Pending')}</td>
+ <td>${r.chargeType==='free'?'Free':'Paid'}<br>₹${Number(r.amount||0).toLocaleString('en-IN')}</td>
+ <td><button class="secondary" onclick="showDetail('${r.id}')">View</button> <button class="secondary" onclick="editRecord('${r.id}')">Edit</button> <button onclick="shareRecord('${r.id}')">WhatsApp</button> <button class="danger" onclick="deleteRecord('${r.id}')">Delete</button></td>
+ </tr>`).join('')||'<tr><td colspan="10">No matching records.</td></tr>';
+ let hint=$('selectionHint');if(hint)hint.textContent=selectedIds.size+' service entr'+(selectedIds.size===1?'y':'ies')+' selected. Select one or more rows and tap Share Selected.';
+}
+$('search').addEventListener('input',renderRecords);$('filterStatus').addEventListener('change',renderRecords);
+function editRecord(id){let r=records.find(x=>x.id===id);if(!r)return;$('serviceNo').value=r.id||'';for(let k of ['customer','mobile','product','model','serial','received','billDate','billNo','warranty','warrantyMonths','complaint','rootCause','status','chargeType','amount','finalUpdate'])$(k).value=r[k]??'';$('editId').value=id;$('formTitle').textContent='Edit '+id;showTab('entry')}
+function deleteRecord(id){if(confirm('Delete this service entry?')){records=records.filter(r=>r.id!==id);selectedIds.delete(id);save()}}
+function clean(v){return (v===undefined||v===null||String(v).trim()===''||String(v)==='undefined')?'—':String(v)}
+function serviceWhatsAppText(r){
+ return [
+  '*MOOTEK TECHNOLOGIES*','*SERVICE REPORT*','━━━━━━━━━━━━━━━━━━',
+  '*Service Entry:* *'+clean(r.id)+'*',
+  '*Customer:* *'+clean(r.customer)+'*',
+  '*Mobile:* *'+clean(r.mobile)+'*','',
+  '*PRODUCT DETAILS*',
+  '*Product:* '+clean(r.product),
+  '*Model:* '+clean(r.model),
+  '*Serial Number:* '+clean(r.serial),'',
+  '*SERVICE DETAILS*',
+  '*Received Date:* '+clean(r.received),
+  '*Bill Date:* '+clean(r.billDate),
+  '*Bill Number:* '+clean(r.billNo),
+  '*Warranty:* '+warrantyStatus(r),
+  '*Customer Complaint:* '+clean(r.complaint),
+  '*Root Cause:* '+clean(r.rootCause),'',
+  '*SERVICE RESULT*',
+  '*Status:* *'+clean(r.status)+'*',
+  '*Service Type:* '+(r.chargeType==='free'?'FREE':'PAID'),
+  '*Service Amount:* ₹'+Number(r.amount||0).toLocaleString('en-IN'),
+  '*Final Update:* '+clean(r.finalUpdate),
+  '━━━━━━━━━━━━━━━━━━','_Thank you for choosing MOOTEK Technologies._'
+ ].join('\n');
+}
+function openWhatsAppText(msg){window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')}
+function shareRecord(id){let r=records.find(x=>x.id===id);if(!r)return;openWhatsAppText(serviceWhatsAppText(r))}
+function printRecords(){showTab('records');setTimeout(()=>window.print(),150)}
+function backupJSON(){let blob=new Blob([JSON.stringify(records,null,2)],{type:'application/json'});downloadBlob(blob,'MOOTEK_Service_Backup_'+today()+'.json')}
+function exportCSV(){let cols=['id','customer','mobile','product','model','serial','received','billDate','billNo','warranty','warrantyMonths','complaint','rootCause','status','chargeType','amount','finalUpdate'];let csv=[cols.join(','),...records.map(r=>cols.map(k=>'"'+String(r[k]??'').replace(/"/g,'""')+'"').join(','))].join('\n');downloadBlob(new Blob([csv],{type:'text/csv'}),'MOOTEK_Service_Records.csv')}
+function downloadBlob(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+$('restoreFile').addEventListener('change',async e=>{let f=e.target.files[0];if(!f)return;try{let data=JSON.parse(await f.text());if(!Array.isArray(data))throw Error();if(confirm('Restore will replace current records. Continue?')){records=data;save();alert('Backup restored.')}}catch(err){alert('Invalid backup file.')}e.target.value=''});
+function clearAll(){if(confirm('Permanently delete ALL service records from this browser?')){records=[];save();alert('All local records deleted.')}}
+
+let currentDetail='';
+function openMetric(metric){
+ $('filterStatus').value=(metric==='Pending'||metric==='Complete'||metric==="Can't Repair")?metric:'';
+ $('search').value='';renderRecords();showTab('records');
+ if(metric==='Free'||metric==='Paid'){
+  let list=records.filter(r=>metric==='Free'?r.chargeType==='free':r.chargeType!=='free');
+  $('recordRows').innerHTML=list.map(recordRow).join('')||'<tr><td colspan="9">No matching entries.</td></tr>';
+ }
+}
+function recordRow(r){return `<tr><td>${esc(r.id)}</td><td>${esc(r.customer)}<br>${esc(r.mobile)}</td><td>${esc(r.product)}<br>${esc(r.model)}</td><td>${esc(r.serial)}</td><td>${esc(r.received)}</td><td>${esc(warrantyStatus(r))}</td><td>${badge(r.status)}</td><td>${r.chargeType==='free'?'Free':'Paid'}<br>₹${Number(r.amount||0).toLocaleString('en-IN')}</td><td><button class="secondary" onclick="showDetail('${r.id}')">View</button> <button class="secondary" onclick="editRecord('${r.id}')">Edit</button> <button onclick="shareRecord('${r.id}')">WhatsApp</button> <button class="danger" onclick="deleteRecord('${r.id}')">Delete</button></td></tr>`}
+function showDetail(id){
+ let r=records.find(x=>x.id===id);if(!r)return;currentDetail=id;
+ let fields=[['Entry ID',r.id],['Customer',r.customer],['Mobile',r.mobile],['Product',r.product],['Product Model',r.model],['Serial Number',r.serial],['Received Date',r.received],['Bill Date',r.billDate],['Bill Number',r.billNo],['Warranty',warrantyStatus(r)],['Warranty Period',(r.warrantyMonths||12)+' months'],['Customer Complaint',r.complaint],['Root Cause',r.rootCause],['Status',r.status],['Service Type',r.chargeType==='free'?'Free':'Paid'],['Amount','₹'+Number(r.amount||0).toLocaleString('en-IN')],['Final Update',r.finalUpdate]];
+ $('detailContent').innerHTML='<div class="grid">'+fields.map(([k,v])=>`<div class="field"><label>${esc(k)}</label><div style="padding:9px;background:#f5f8fb;border-radius:8px;min-height:36px;white-space:pre-wrap">${esc(v||'—')}</div></div>`).join('')+'</div>';
+ showTab('detail');
+}
+function toggleSelected(id,checked){if(checked)selectedIds.add(id);else selectedIds.delete(id);let h=$('selectionHint');if(h)h.textContent=selectedIds.size+' service entr'+(selectedIds.size===1?'y':'ies')+' selected.'}
+function selectVisible(checked){
+ let q=($('search')?.value||'').toLowerCase(),st=$('filterStatus')?.value||'';
+ records.filter(r=>(!st||r.status===st)&&[r.id,r.customer,r.mobile,r.product,r.model,r.serial].join(' ').toLowerCase().includes(q)).forEach(r=>{if(checked)selectedIds.add(r.id);else selectedIds.delete(r.id)});
+ renderRecords();
+}
+function shareSelected(){
+ let chosen=records.filter(r=>selectedIds.has(r.id));
+ if(!chosen.length){alert('Please select at least one service entry.');return;}
+ let msg=chosen.length===1?serviceWhatsAppText(chosen[0]):[
+  '*MOOTEK TECHNOLOGIES*','*SERVICE SUMMARY REPORT*','━━━━━━━━━━━━━━━━━━',
+  'Total Selected Entries: '+chosen.length,'',
+  ...chosen.map((r,i)=>[
+   '*'+(i+1)+'. '+clean(r.id)+'*',
+   'Customer: '+clean(r.customer),
+   'Product: '+clean(r.product)+' | Model: '+clean(r.model),
+   'Serial: '+clean(r.serial),
+   'Received: '+clean(r.received),
+   'Warranty: '+warrantyStatus(r),
+   'Status: '+clean(r.status),
+   'Service: '+(r.chargeType==='free'?'FREE':'PAID')+' | Amount: ₹'+Number(r.amount||0).toLocaleString('en-IN'),
+   'Final Update: '+clean(r.finalUpdate)
+  ].join('\n')),
+  '━━━━━━━━━━━━━━━━━━','_MOOTEK Technologies_'
+ ].join('\n\n');
+ openWhatsAppText(msg);
+}
+function shareAll(){selectedIds=new Set(records.map(r=>r.id));shareSelected()}
+function printDetail(){if(currentDetail){document.title='MOOTEK_'+currentDetail;window.print();document.title='MOOTEK Service Entry';}}
+
+
+const CALLKEY='mootek_call_entries_v1',RDKEY='mootek_rd_entries_v1';let callRecords=[],rdRecords=[],selectedCalls=new Set();
+function readStore(k){try{return JSON.parse(localStorage.getItem(k)||'[]')}catch(e){return []}}
+function goHome(){document.querySelectorAll('main section').forEach(x=>x.classList.add('hidden'));$('home').classList.remove('hidden');$('serviceTabs').classList.add('hidden')}
+function openModule(m){document.querySelectorAll('main section').forEach(x=>x.classList.add('hidden'));$('serviceTabs').classList.add('hidden');if(m==='service'){$('serviceTabs').classList.remove('hidden');showTab('dashboard')}if(m==='call'){renderCalls();$('callHome').classList.remove('hidden')}if(m==='rd'){renderRd();$('rdHome').classList.remove('hidden')}}
+function showCallPage(id){['callHome','callForm','callList'].forEach(x=>$(x).classList.add('hidden'));$(id).classList.remove('hidden');if(id==='callList')renderCallList()}
+function showRdPage(id){['rdHome','rdForm','rdList'].forEach(x=>$(x).classList.add('hidden'));$(id).classList.remove('hidden');if(id==='rdList')renderRdList()}
+function renderCalls(){callRecords=readStore(CALLKEY);$('callTotal').textContent=callRecords.length;$('callPending').textContent=callRecords.filter(x=>x.status==='Pending').length;$('callCompleted').textContent=callRecords.filter(x=>x.status==='Completed').length;$('callOngoing').textContent=callRecords.filter(x=>x.status==='On Going').length;$('callRecent').innerHTML=callRecords.slice(0,8).map(r=>`<tr><td>${esc(r.no)}</td><td>${esc(r.customer)}</td><td>${esc(r.product)}</td><td>${esc(r.issue)}</td><td>${esc(r.method)}</td><td>${esc(r.status)}</td></tr>`).join('')||'<tr><td colspan="6">No calls entered.</td></tr>'}
+function resetCallForm(){$('callEntryForm').reset();$('callEditId').value='';$('callDate').value=today();$('callFormTitle').textContent='New Call Entry'}
+$('callEntryForm').addEventListener('submit',e=>{e.preventDefault();let oldId=$('callEditId').value,no=$('callNo').value.trim();if(callRecords.some(x=>x.no===no&&x.no!==oldId)){alert('Call Number already exists.');return}let r={no,date:$('callDate').value,customer:$('callCustomer').value.trim(),mobile:$('callMobile').value.trim(),product:$('callProduct').value.trim(),model:$('callModel').value.trim(),issue:$('callIssue').value.trim(),method:$('callMethod').value,status:$('callStatus').value,action:$('callAction').value.trim(),remoteId:$('callRemoteId').value.trim(),followup:$('callFollowup').value,final:$('callFinal').value.trim()};if(oldId)callRecords=callRecords.map(x=>x.no===oldId?r:x);else callRecords.unshift(r);localStorage.setItem(CALLKEY,JSON.stringify(callRecords));resetCallForm();renderCalls();showCallPage('callHome');alert('Call entry saved.')});
+function callMsg(r){return [
+ '*MOOTEK TECHNOLOGIES*','*CUSTOMER CALL REPORT*','━━━━━━━━━━━━━━━━━━',
+ '*Call No:* *'+(r.no||'—')+'*',
+ '*Date:* '+(r.date||'—'),
+ '*Customer:* *'+(r.customer||'—')+'*',
+ '*Mobile:* '+(r.mobile||'—'),
+ '*Product:* '+(r.product||'—'),
+ '*Model / Serial:* '+(r.model||'—'),
+ '*Customer Issue:* '+(r.issue||'—'),
+ '*Support Method:* '+(r.method||'—'),
+ '*Status:* *'+(r.status||'—')+'*',
+ '*Action Taken:* '+(r.action||'—'),
+ '*Follow-up:* '+(r.followup||'—'),
+ '*Final Update:* '+(r.final||'—'),
+ '━━━━━━━━━━━━━━━━━━','_MOOTEK Technologies_'
+].join('\n')}
+function sendCallWA(r){window.open('https://wa.me/?text='+encodeURIComponent(callMsg(r)),'_blank')}
+function renderCallList(){let q=($('callSearch').value||'').toLowerCase(),st=$('callFilter').value;let list=callRecords.filter(r=>(!st||r.status===st)&&[r.no,r.customer,r.mobile,r.product,r.issue].join(' ').toLowerCase().includes(q));$('callRows').innerHTML=list.map(r=>`<tr><td><input type="checkbox" style="width:18px" ${selectedCalls.has(r.no)?'checked':''} onchange="this.checked?selectedCalls.add('${r.no}'):selectedCalls.delete('${r.no}')"></td><td>${esc(r.no)}</td><td>${esc(r.date)}</td><td>${esc(r.customer)}<br>${esc(r.mobile)}</td><td>${esc(r.product)}<br>${esc(r.model)}</td><td>${esc(r.issue)}</td><td>${esc(r.method)}</td><td>${esc(r.status)}</td><td><button class="secondary" onclick="editCall('${r.no}')">Edit</button> <button onclick="sendCallWA(callRecords.find(x=>x.no==='${r.no}'))">WhatsApp</button></td></tr>`).join('')||'<tr><td colspan="9">No matching calls.</td></tr>'}
+$('callSearch').addEventListener('input',renderCallList);$('callFilter').addEventListener('change',renderCallList);
+function editCall(no){let r=callRecords.find(x=>x.no===no);if(!r)return;let m={callNo:'no',callDate:'date',callCustomer:'customer',callMobile:'mobile',callProduct:'product',callModel:'model',callIssue:'issue',callMethod:'method',callStatus:'status',callAction:'action',callRemoteId:'remoteId',callFollowup:'followup',callFinal:'final'};Object.entries(m).forEach(([id,k])=>$(id).value=r[k]||'');$('callEditId').value=no;$('callFormTitle').textContent='Edit Call '+no;showCallPage('callForm')}
+function filterCalls(status){$('callFilter').value=status;showCallPage('callList');renderCallList()}
+function shareSelectedCalls(){let a=callRecords.filter(x=>selectedCalls.has(x.no));if(!a.length){alert('Select at least one call.');return}window.open('https://wa.me/?text='+encodeURIComponent(a.map(callMsg).join('\n\n')),'_blank')}
+$('rdEntryForm').addEventListener('submit',async e=>{e.preventDefault();let no=$('rdNo').value.trim();if(rdRecords.some(x=>x.no===no)){alert('Research ID already exists.');return}let attachments=[];for(let f of Array.from($('rdFiles').files)){if(f.size>1200000){alert(f.name+' is over 1.2 MB. Choose a smaller file.');return}attachments.push({name:f.name,data:await new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)})})}rdRecords.unshift({no,project:$('rdProject').value.trim(),stage:$('rdStage').value,owner:$('rdOwner').value.trim(),details:$('rdDetails').value.trim(),findings:$('rdFindings').value.trim(),attachments,date:today()});localStorage.setItem(RDKEY,JSON.stringify(rdRecords));e.target.reset();renderRd();showRdPage('rdHome');alert('R&D entry saved.')});
+function renderRd(){rdRecords=readStore(RDKEY);$('rdTotal').textContent=rdRecords.length;$('rdProgress').textContent=rdRecords.filter(x=>['Start','Pending','Need More Action'].includes(x.stage)).length;$('rdPassed').textContent=rdRecords.filter(x=>x.stage==='Pass').length}
+function renderRdList(){rdRecords=readStore(RDKEY);let q=$('rdSearch').value.toLowerCase();$('rdRows').innerHTML=rdRecords.filter(r=>(r.no+' '+r.project).toLowerCase().includes(q)).map(r=>`<tr><td>${esc(r.no)}</td><td>${esc(r.project)}</td><td>${esc(r.stage)}</td><td>${esc(r.owner)}</td><td>${esc(r.details)}<br>${esc(r.findings)}</td><td>${(r.attachments||[]).map(a=>`<a href="${a.data}" download="${esc(a.name)}">${esc(a.name)}</a>`).join('<br>')||'—'}<br><button onclick="shareRdWA('${r.no}')">WhatsApp Report</button></td></tr>`).join('')||'<tr><td colspan="6">No R&D records.</td></tr>'}
+$('rdSearch').addEventListener('input',renderRdList);
+function shareRdWA(no){
+ let r=rdRecords.find(x=>x.no===no);if(!r)return;
+ let msg=[
+  '*MOOTEK TECHNOLOGIES*','*R&D RESEARCH REPORT*','━━━━━━━━━━━━━━━━━━',
+  '*Research ID:* *'+(r.no||'—')+'*',
+  '*Project / Product:* *'+(r.project||'—')+'*',
+  '*Stage / Status:* *'+(r.stage||'—')+'*',
+  '*Assigned To:* '+(r.owner||'—'),
+  '*Entry Date:* '+(r.date||'—'),
+  '*Research Details:* '+(r.details||'—'),
+  '*Findings / Final Report:* '+(r.findings||'—'),
+  '*Attachments:* '+((r.attachments||[]).map(a=>a.name).join(', ')||'None'),
+  '━━━━━━━━━━━━━━━━━━','_MOOTEK Technologies_'
+ ].join('\n');
+ window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+$('callDate').value=today();
+
+load();render();
+(function(){let overdue=records.filter(r=>r.status==='Pending'&&r.received&&Math.floor((new Date(today()+'T00:00:00')-new Date(r.received+'T00:00:00'))/86400000)>3);let stamp='mootek_overdue_alert_'+today();if(overdue.length&&!localStorage.getItem(stamp)){localStorage.setItem(stamp,'1');setTimeout(()=>alert('MOOTEK ALERT: '+overdue.length+' service entries pending for more than 3 days. Please check Dashboard.'),500);}})();
+
+</script></body></html>
